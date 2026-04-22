@@ -17,15 +17,16 @@ class RouteListScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
+        title: Text('Confirmar eliminación', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         content: Text(
             '¿Está seguro de eliminar la ruta "$routeName"? Esto también eliminará todas sus unidades.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               context.read<DataProvider>().deleteRoute(routeId);
               Navigator.of(ctx).pop();
@@ -33,7 +34,11 @@ class RouteListScreen extends StatelessWidget {
                 const SnackBar(content: Text('Ruta eliminada')),
               );
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
             child: const Text('Eliminar'),
           ),
         ],
@@ -44,12 +49,14 @@ class RouteListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
           cooperative.name,
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.blue.shade700,
+        elevation: 0,
+        backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
       ),
       body: Consumer<DataProvider>(
@@ -61,22 +68,31 @@ class RouteListScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.route_outlined,
-                    size: 80,
-                    color: Colors.grey.shade400,
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.route_outlined,
+                      size: 64,
+                      color: Colors.green.shade300,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
                     'No hay rutas registradas',
                     style: GoogleFonts.poppins(
                       fontSize: 18,
-                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Presiona el botón + para agregar una',
+                    'Comienza agregando una nueva ruta\npara esta cooperativa',
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: Colors.grey.shade500,
@@ -89,7 +105,7 @@ class RouteListScreen extends StatelessWidget {
 
           return ListView.builder(
             itemCount: routes.length,
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             itemBuilder: (context, index) {
               final route = routes[index];
               final unitCount = dataProvider.getUnitCountForRoute(route.id);

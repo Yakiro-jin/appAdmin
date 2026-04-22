@@ -43,130 +43,178 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(
-          'Administrador de Transporte',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Panel de Control',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18),
+            ),
+            Text(
+              'Gestión de flotas y rutas',
+              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w400, color: Colors.white70),
+            ),
+          ],
         ),
-        backgroundColor: Colors.blue.shade700,
+        elevation: 0,
+        backgroundColor: const Color(0xFF1A1F2B),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthProvider>().logout();
-            },
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () => context.read<AuthProvider>().logout(),
             tooltip: 'Cerrar sesión',
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Consumer<DataProvider>(
         builder: (context, dataProvider, child) {
           final cooperatives = dataProvider.cooperatives;
 
-          return Column(
-            children: [
-              // Statistics Section
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: Colors.grey.shade50,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        icon: Icons.business,
-                        title: 'Cooperativas',
-                        value: '${cooperatives.length}',
-                        color: Colors.blue.shade700,
-                      ),
+          return CustomScrollView(
+            slivers: [
+              // Statistics Header
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1A1F2B),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: StatCard(
-                        icon: Icons.route,
-                        title: 'Rutas',
-                        value: '${dataProvider.getTotalRoutes()}',
-                        color: Colors.green.shade700,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: StatCard(
+                          icon: Icons.business_rounded,
+                          title: 'Empresas',
+                          value: '${cooperatives.length}',
+                          color: Colors.blue.shade400,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: StatCard(
-                        icon: Icons.directions_bus,
-                        title: 'Unidades',
-                        value: '${dataProvider.getTotalUnits()}',
-                        color: Colors.orange.shade700,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: StatCard(
+                          icon: Icons.route_rounded,
+                          title: 'Rutas',
+                          value: '${dataProvider.getTotalRoutes()}',
+                          color: Colors.teal.shade400,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: StatCard(
+                          icon: Icons.directions_bus_rounded,
+                          title: 'Unidades',
+                          value: '${dataProvider.getTotalUnits()}',
+                          color: Colors.orange.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
-              // Cooperatives List
-              Expanded(
-                child: cooperatives.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.business_outlined,
-                              size: 80,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No hay cooperativas registradas',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Presiona el botón + para agregar una',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: cooperatives.length,
-                        itemBuilder: (context, index) {
-                          final cooperative = cooperatives[index];
-                          final routeCount = dataProvider
-                              .getRouteCountForCooperative(cooperative.id);
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-                          return CooperativeCard(
-                            cooperative: cooperative,
-                            routeCount: routeCount,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      RouteListScreen(cooperative: cooperative),
-                                ),
-                              );
-                            },
-                            onEdit: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => CooperativeFormScreen(
-                                      cooperative: cooperative),
-                                ),
-                              );
-                            },
-                            onDelete: () {
-                              _showDeleteDialog(
-                                  context, cooperative.id, cooperative.name);
-                            },
-                          );
-                        },
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.business_center_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Cooperativas Registradas',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
                       ),
+                    ],
+                  ),
+                ),
               ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+              // Cooperatives List
+              if (cooperatives.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.business_outlined,
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'No hay cooperativas',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Toca el botón + para comenzar',
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 80),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final cooperative = cooperatives[index];
+                        final routeCount = dataProvider.getRouteCountForCooperative(cooperative.id);
+
+                        return CooperativeCard(
+                          cooperative: cooperative,
+                          routeCount: routeCount,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => RouteListScreen(cooperative: cooperative),
+                              ),
+                            );
+                          },
+                          onEdit: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => CooperativeFormScreen(cooperative: cooperative),
+                              ),
+                            );
+                          },
+                          onDelete: () => _showDeleteDialog(context, cooperative.id, cooperative.name),
+                        );
+                      },
+                      childCount: cooperatives.length,
+                    ),
+                  ),
+                ),
             ],
           );
         },
@@ -179,10 +227,11 @@ class HomeScreen extends StatelessWidget {
             ),
           );
         },
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: const Color(0xFF1A1F2B),
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva Cooperativa'),
+        elevation: 4,
+        icon: const Icon(Icons.add_business_rounded),
+        label: Text('Nueva Cooperativa', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
       ),
     );
   }

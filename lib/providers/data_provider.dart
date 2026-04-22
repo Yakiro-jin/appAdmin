@@ -124,13 +124,14 @@ class DataProvider with ChangeNotifier {
 
   // Route CRUD
   Future<void> addRoute(String name, String origin, String destination,
-      String cooperativeId) async {
+      String cooperativeId, List<RouteStop> stops) async {
     final route = TransportRoute(
       id: _uuid.v4(),
       name: name,
       origin: origin,
       destination: destination,
       cooperativeId: cooperativeId,
+      stops: stops,
       createdAt: DateTime.now(),
     );
 
@@ -139,14 +140,15 @@ class DataProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateRoute(
-      String id, String name, String origin, String destination) async {
+  Future<void> updateRoute(String id, String name, String origin,
+      String destination, List<RouteStop> stops) async {
     final index = _routes.indexWhere((r) => r.id == id);
     if (index != -1) {
       _routes[index] = _routes[index].copyWith(
         name: name,
         origin: origin,
         destination: destination,
+        stops: stops,
       );
       await _saveData();
       notifyListeners();

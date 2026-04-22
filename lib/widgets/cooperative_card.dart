@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/cooperative.dart';
 
 class CooperativeCard extends StatelessWidget {
@@ -19,125 +20,154 @@ class CooperativeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.business,
-                      color: Colors.blue.shade700,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          cooperative.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          cooperative.description,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        child: Icon(
+                          Icons.business_rounded,
+                          color: Colors.blue.shade600,
+                          size: 26,
                         ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        onEdit();
-                      } else if (value == 'delete') {
-                        onDelete();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.edit, size: 20),
-                            SizedBox(width: 8),
-                            Text('Editar'),
+                            Text(
+                              cooperative.name,
+                              style: GoogleFonts.poppins(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1A1F2B),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              cooperative.description,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                                height: 1.4,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
-                        value: 'delete',
+                      _buildMenuButton(),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.delete, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Eliminar',
-                                style: TextStyle(color: Colors.red)),
+                            Icon(Icons.route_rounded, size: 14, color: Colors.teal.shade700),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$routeCount ${routeCount == 1 ? 'ruta' : 'rutas'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.teal.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
+                      const Spacer(),
+                      Text(
+                        'Ver detalles',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, size: 16, color: Colors.blue.shade600),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.route,
-                      size: 16,
-                      color: Colors.blue.shade700,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$routeCount ${routeCount == 1 ? 'ruta' : 'rutas'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMenuButton() {
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        if (value == 'edit') {
+          onEdit();
+        } else if (value == 'delete') {
+          onDelete();
+        }
+      },
+      icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade400),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('Editar'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red),
+              SizedBox(width: 12),
+              Text('Eliminar', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

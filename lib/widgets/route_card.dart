@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/route.dart';
 
 class RouteCard extends StatelessWidget {
@@ -19,134 +20,157 @@ class RouteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.route,
-                      color: Colors.green.shade700,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          route.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
+                        child: Icon(
+                          Icons.route,
+                          color: Colors.green.shade700,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.location_on,
-                                size: 16, color: Colors.grey.shade600),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                '${route.origin} → ${route.destination}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              route.name,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${route.origin} → ${route.destination}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        onEdit();
-                      } else if (value == 'delete') {
-                        onDelete();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 20),
-                            SizedBox(width: 8),
-                            Text('Editar'),
-                          ],
-                        ),
                       ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Eliminar',
-                                style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
+                      _buildMenuButton(),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _buildBadge(
+                        Icons.directions_bus,
+                        '$unitCount ${unitCount == 1 ? 'unidad' : 'unidades'}',
+                        Colors.orange.shade700,
+                        Colors.orange.shade50,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildBadge(
+                        Icons.location_on,
+                        '${route.stops.length} paradas',
+                        Colors.blue.shade700,
+                        Colors.blue.shade50,
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.directions_bus,
-                      size: 16,
-                      color: Colors.orange.shade700,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$unitCount ${unitCount == 1 ? 'unidad' : 'unidades'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBadge(IconData icon, String label, Color color, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuButton() {
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        if (value == 'edit') {
+          onEdit();
+        } else if (value == 'delete') {
+          onDelete();
+        }
+      },
+      icon: Icon(Icons.more_vert, color: Colors.grey.shade400),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('Editar'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 20, color: Colors.red),
+              SizedBox(width: 12),
+              Text('Eliminar', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
