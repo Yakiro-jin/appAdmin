@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../models/route.dart';
+import '../../models/transport_unit.dart';
 import '../../providers/data_provider.dart';
 import '../../widgets/transport_unit_card.dart';
 import '../units/transport_unit_form_screen.dart';
@@ -32,31 +33,189 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> with SingleTicker
     super.dispose();
   }
 
-  void _showDeleteDialog(
-      BuildContext context, String unitId, String unitNumber) {
+  void _showUnassignDialog(BuildContext context, String unitId, String unitNumber) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmar eliminación', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Text('¿Está seguro de eliminar la unidad "$unitNumber"?'),
+        title: Text('Confirmar desasignación', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Text('¿Está seguro de quitar la unidad "$unitNumber" de esta ruta?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
-              context.read<DataProvider>().deleteTransportUnit(unitId);
+              context.read<DataProvider>().assignRouteToUnit(unitId, null);
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Unidad eliminada')),
+                const SnackBar(content: Text('Unidad desasignada de la ruta')),
               );
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: const Text('Quitar'),
           ),
         ],
       ),
+    );
+  }
+
+  void _showAssignUnitDialog(BuildContext context, DataProvider dataProvider) {
+    final allUnits = dataProvider.getUnitsByCooperative(widget.route.cooperativeId);
+    final assignableUnits = allUnits.where((u) => u.routeId != widget.route.id).toList();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(
+            'Asignar Unidad a Ruta',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: assignableUnits.isEmpty
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.bus_alert_rounded, size: 48, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No hay otras unidades en la cooperativa para asignar.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: assignableUnits.length,
+                    itemBuilder: (context, index) {
+                      final unit = assignableUnits[index];
+                      final currentRouteName = unit.routeId != null
+                          ? dataProvider.routes.firstWhere(
+                              (r) => r.id == unit.routeId,
+                              orElse: () => widget.route, // fallback
+                            ).name
+                          : 'Ninguna';
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.orange.shade100,
+                          child: Icon(Icons.directions_bus, color: Colors.orange.shade800),
+                        ),
+                        title: Text('Unidad ${unit.unitNumber}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                        subtitle: Text('Placa: ${unit.plate}\nRuta actual: $currentRouteName'),
+                        onTap: () {
+                          dataProvider.assignRouteToUnit(unit.id, widget.route.id);
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Unidad ${unit.unitNumber} asignada a la ruta')),
+                          );
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDriverSelectionDialog(
+      BuildContext context, DataProvider dataProvider, TransportUnit unit) {
+    final drivers = dataProvider.getDriversByCooperative(widget.route.cooperativeId);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(
+            'Asignar Chofer a Unidad ${unit.unitNumber}',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: drivers.isEmpty
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person_off_rounded, size: 48, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No hay choferes registrados en esta cooperativa.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: drivers.length,
+                    itemBuilder: (context, index) {
+                      final driver = drivers[index];
+                      final isCurrent = unit.driverId == driver.id;
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: isCurrent ? Colors.green.shade100 : Colors.grey.shade100,
+                          child: Icon(
+                            Icons.person,
+                            color: isCurrent ? Colors.green.shade800 : Colors.grey.shade700,
+                          ),
+                        ),
+                        title: Text(
+                          driver.name,
+                          style: GoogleFonts.poppins(
+                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        subtitle: Text('Telf: ${driver.phone}'),
+                        trailing: isCurrent ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                        onTap: () {
+                          dataProvider.assignDriverToUnit(unit.id, driver.id);
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Chofer ${driver.name} asignado a la unidad ${unit.unitNumber}')),
+                          );
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            if (unit.driverId != null && unit.driverId!.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  dataProvider.assignDriverToUnit(unit.id, null);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Chofer desasignado de la unidad ${unit.unitNumber}')),
+                  );
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Quitar Chofer (Ninguno)'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -110,16 +269,12 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> with SingleTicker
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => TransportUnitFormScreen(routeId: widget.route.id),
-            ),
-          );
+          _showAssignUnitDialog(context, context.read<DataProvider>());
         },
         backgroundColor: Colors.orange.shade700,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Nueva Unidad'),
+        label: const Text('Asignar Unidad'),
       ),
     );
   }
@@ -317,10 +472,10 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> with SingleTicker
                 Icon(Icons.directions_bus_outlined, size: 80, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
                 Text(
-                  'No hay unidades registradas',
+                  'No hay unidades asignadas',
                   style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                 ),
-                Text('Añade la primera unidad con el botón +', style: TextStyle(color: Colors.grey.shade500)),
+                Text('Asigna una unidad con el botón +', style: TextStyle(color: Colors.grey.shade500)),
               ],
             ),
           );
@@ -331,19 +486,27 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> with SingleTicker
           padding: const EdgeInsets.all(16),
           itemBuilder: (context, index) {
             final unit = units[index];
+
+            final matchingDrivers = dataProvider.drivers.where((d) => d.id == unit.driverId);
+            final driverName = matchingDrivers.isNotEmpty ? matchingDrivers.first.name : null;
+
             return TransportUnitCard(
               unit: unit,
+              driverName: driverName,
               onEdit: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => TransportUnitFormScreen(
-                      routeId: widget.route.id,
+                      cooperativeId: widget.route.cooperativeId,
                       unit: unit,
                     ),
                   ),
                 );
               },
-              onDelete: () => _showDeleteDialog(context, unit.id, unit.unitNumber),
+              onDelete: () => _showUnassignDialog(context, unit.id, unit.unitNumber),
+              onTap: () {
+                _showDriverSelectionDialog(context, dataProvider, unit);
+              },
             );
           },
         );

@@ -12,13 +12,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _cedulaController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _rememberMe = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _cedulaController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -30,8 +31,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.login(
-      _emailController.text.trim(),
+      _cedulaController.text.trim(),
       _passwordController.text,
+      _rememberMe,
     );
 
     if (!mounted) return;
@@ -39,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error al iniciar sesión'),
+          content: Text('Cédula o contraseña incorrecta'),
           backgroundColor: Colors.red,
         ),
       );
@@ -105,21 +107,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 32),
                       TextFormField(
-                        controller: _emailController,
+                        controller: _cedulaController,
                         decoration: InputDecoration(
-                          labelText: 'Correo electrónico',
-                          prefixIcon: const Icon(Icons.email),
+                          labelText: 'Cédula',
+                          prefixIcon: const Icon(Icons.badge),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        keyboardType: TextInputType.emailAddress,
+                        keyboardType: TextInputType.number,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Por favor ingrese su correo';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Por favor ingrese un correo válido';
+                            return 'Por favor ingrese su cédula';
                           }
                           return null;
                         },
@@ -139,13 +138,26 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Por favor ingrese su contraseña';
                           }
-                          if (value.length < 4) {
-                            return 'La contraseña debe tener al menos 4 caracteres';
-                          }
                           return null;
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+                      CheckboxListTile(
+                        title: Text(
+                          'Mantener sesión iniciada',
+                          style: GoogleFonts.poppins(fontSize: 14),
+                        ),
+                        value: _rememberMe,
+                        onChanged: (val) {
+                          setState(() {
+                            _rememberMe = val ?? false;
+                          });
+                        },
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        activeColor: Colors.blue.shade700,
+                      ),
+                      const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
@@ -176,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Nota: Si no tienes cuenta, se creará automáticamente',
+                        'Nota: Use sus credenciales asignadas de administrador',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey.shade600,

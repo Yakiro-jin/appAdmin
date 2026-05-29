@@ -3,8 +3,9 @@ class TransportUnit {
   final String unitNumber;
   final String plate;
   final int capacity;
-  final String driver;
-  final String routeId;
+  final String? driverId;
+  final String cooperativeId;
+  final String? routeId;
   final DateTime createdAt;
 
   TransportUnit({
@@ -12,8 +13,9 @@ class TransportUnit {
     required this.unitNumber,
     required this.plate,
     required this.capacity,
-    required this.driver,
-    required this.routeId,
+    this.driverId,
+    required this.cooperativeId,
+    this.routeId,
     required this.createdAt,
   });
 
@@ -23,7 +25,8 @@ class TransportUnit {
       'unitNumber': unitNumber,
       'plate': plate,
       'capacity': capacity,
-      'driver': driver,
+      'driverId': driverId,
+      'cooperativeId': cooperativeId,
       'routeId': routeId,
       'createdAt': createdAt.toIso8601String(),
     };
@@ -35,8 +38,9 @@ class TransportUnit {
       unitNumber: json['unitNumber'] as String,
       plate: json['plate'] as String,
       capacity: json['capacity'] as int,
-      driver: json['driver'] as String,
-      routeId: json['routeId'] as String,
+      driverId: json['driverId'] as String?,
+      cooperativeId: json['cooperativeId'] as String? ?? '',
+      routeId: json['routeId'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
@@ -46,7 +50,8 @@ class TransportUnit {
     String? unitNumber,
     String? plate,
     int? capacity,
-    String? driver,
+    String? driverId,
+    String? cooperativeId,
     String? routeId,
     DateTime? createdAt,
   }) {
@@ -55,7 +60,8 @@ class TransportUnit {
       unitNumber: unitNumber ?? this.unitNumber,
       plate: plate ?? this.plate,
       capacity: capacity ?? this.capacity,
-      driver: driver ?? this.driver,
+      driverId: driverId ?? this.driverId,
+      cooperativeId: cooperativeId ?? this.cooperativeId,
       routeId: routeId ?? this.routeId,
       createdAt: createdAt ?? this.createdAt,
     );

@@ -5,16 +5,19 @@ import 'package:uuid/uuid.dart';
 import '../models/cooperative.dart';
 import '../models/route.dart';
 import '../models/transport_unit.dart';
+import '../models/driver.dart';
 
 class DataProvider with ChangeNotifier {
   List<Cooperative> _cooperatives = [];
   List<TransportRoute> _routes = [];
   List<TransportUnit> _units = [];
+  List<Driver> _drivers = [];
   bool _isLoading = false;
 
   List<Cooperative> get cooperatives => _cooperatives;
   List<TransportRoute> get routes => _routes;
   List<TransportUnit> get units => _units;
+  List<Driver> get drivers => _drivers;
   bool get isLoading => _isLoading;
 
   final _uuid = const Uuid();
@@ -45,6 +48,13 @@ class DataProvider with ChangeNotifier {
           .map((json) => TransportRoute.fromJson(json as Map<String, dynamic>))
           .toList();
 
+      // Load drivers
+      final driversJson = prefs.getString('drivers') ?? '[]';
+      final driversList = jsonDecode(driversJson) as List;
+      _drivers = driversList
+          .map((json) => Driver.fromJson(json as Map<String, dynamic>))
+          .toList();
+
       // Load units
       final unitsJson = prefs.getString('units') ?? '[]';
       final unitsList = jsonDecode(unitsJson) as List;
@@ -72,6 +82,11 @@ class DataProvider with ChangeNotifier {
       await prefs.setString(
         'routes',
         jsonEncode(_routes.map((r) => r.toJson()).toList()),
+      );
+
+      await prefs.setString(
+        'drivers',
+        jsonEncode(_drivers.map((d) => d.toJson()).toList()),
       );
 
       await prefs.setString(
@@ -112,11 +127,11 @@ class DataProvider with ChangeNotifier {
 
   Future<void> deleteCooperative(String id) async {
     _cooperatives.removeWhere((c) => c.id == id);
-    // Also delete related routes and units
-    final routeIds =
-        _routes.where((r) => r.cooperativeId == id).map((r) => r.id).toList();
+    
+    // Also delete related routes, units, and drivers
     _routes.removeWhere((r) => r.cooperativeId == id);
-    _units.removeWhere((u) => routeIds.contains(u.routeId));
+    _units.removeWhere((u) => u.cooperativeId == id);
+    _drivers.removeWhere((d) => d.cooperativeId == id);
 
     await _saveData();
     notifyListeners();
@@ -157,9 +172,12 @@ class DataProvider with ChangeNotifier {
 
   Future<void> deleteRoute(String id) async {
     _routes.removeWhere((r) => r.id == id);
-    // Also delete related units
-    _units.removeWhere((u) => u.routeId == id);
-
+    // Unassign routeId from units belonging to this route
+    for (int i = 0; i < _units.length; i++) {
+      if (_units[i].routeId == id) {
+        _units[i] = _units[i].copyWith(routeId: null);
+      }
+    }
     await _saveData();
     notifyListeners();
   }
@@ -168,20 +186,65 @@ class DataProvider with ChangeNotifier {
     return _routes.where((r) => r.cooperativeId == cooperativeId).toList();
   }
 
+  // Driver CRUD
+  Future<void> addDriver(String name, String phone, String cooperativeId) async {
+    final driver = Driver(
+      id: _uuid.v4(),
+      name: name,
+      phone: phone,
+      cooperativeId: cooperativeId,
+      createdAt: DateTime.now(),
+    );
+
+    _drivers.add(driver);
+    await _saveData();
+    notifyListeners();
+  }
+
+  Future<void> updateDriver(String id, String name, String phone) async {
+    final index = _drivers.indexWhere((d) => d.id == id);
+    if (index != -1) {
+      _drivers[index] = _drivers[index].copyWith(
+        name: name,
+        phone: phone,
+      );
+      await _saveData();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteDriver(String id) async {
+    _drivers.removeWhere((d) => d.id == id);
+    // Unassign driver from units
+    for (int i = 0; i < _units.length; i++) {
+      if (_units[i].driverId == id) {
+        _units[i] = _units[i].copyWith(driverId: null);
+      }
+    }
+    await _saveData();
+    notifyListeners();
+  }
+
+  List<Driver> getDriversByCooperative(String cooperativeId) {
+    return _drivers.where((d) => d.cooperativeId == cooperativeId).toList();
+  }
+
   // Transport Unit CRUD
   Future<void> addTransportUnit(
     String unitNumber,
     String plate,
     int capacity,
-    String driver,
-    String routeId,
-  ) async {
+    String cooperativeId, {
+    String? routeId,
+    String? driverId,
+  }) async {
     final unit = TransportUnit(
       id: _uuid.v4(),
       unitNumber: unitNumber,
       plate: plate,
       capacity: capacity,
-      driver: driver,
+      driverId: driverId,
+      cooperativeId: cooperativeId,
       routeId: routeId,
       createdAt: DateTime.now(),
     );
@@ -195,17 +258,39 @@ class DataProvider with ChangeNotifier {
     String id,
     String unitNumber,
     String plate,
-    int capacity,
-    String driver,
-  ) async {
+    int capacity, {
+    String? routeId,
+    String? driverId,
+    String? cooperativeId,
+  }) async {
     final index = _units.indexWhere((u) => u.id == id);
     if (index != -1) {
       _units[index] = _units[index].copyWith(
         unitNumber: unitNumber,
         plate: plate,
         capacity: capacity,
-        driver: driver,
+        routeId: routeId,
+        driverId: driverId,
+        cooperativeId: cooperativeId ?? _units[index].cooperativeId,
       );
+      await _saveData();
+      notifyListeners();
+    }
+  }
+
+  Future<void> assignDriverToUnit(String unitId, String? driverId) async {
+    final index = _units.indexWhere((u) => u.id == unitId);
+    if (index != -1) {
+      _units[index] = _units[index].copyWith(driverId: driverId);
+      await _saveData();
+      notifyListeners();
+    }
+  }
+
+  Future<void> assignRouteToUnit(String unitId, String? routeId) async {
+    final index = _units.indexWhere((u) => u.id == unitId);
+    if (index != -1) {
+      _units[index] = _units[index].copyWith(routeId: routeId);
       await _saveData();
       notifyListeners();
     }
@@ -219,6 +304,10 @@ class DataProvider with ChangeNotifier {
 
   List<TransportUnit> getUnitsByRoute(String routeId) {
     return _units.where((u) => u.routeId == routeId).toList();
+  }
+
+  List<TransportUnit> getUnitsByCooperative(String cooperativeId) {
+    return _units.where((u) => u.cooperativeId == cooperativeId).toList();
   }
 
   // Statistics

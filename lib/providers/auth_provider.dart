@@ -21,11 +21,17 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString('current_user');
+      final rememberMe = prefs.getBool('remember_me') ?? false;
 
-      if (userJson != null) {
-        final userMap = jsonDecode(userJson) as Map<String, dynamic>;
-        _currentUser = User.fromJson(userMap);
+      if (rememberMe) {
+        final userJson = prefs.getString('current_user');
+        if (userJson != null) {
+          final userMap = jsonDecode(userJson) as Map<String, dynamic>;
+          _currentUser = User.fromJson(userMap);
+        }
+      } else {
+        // Clear session from storage if rememberMe is false
+        await prefs.remove('current_user');
       }
     } catch (e) {
       debugPrint('Error loading session: $e');
@@ -35,44 +41,34 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String cedula, String password, bool rememberMe) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Get all users
-      final usersJson = prefs.getString('users') ?? '[]';
-      final usersList = jsonDecode(usersJson) as List;
-
-      // Try to find existing user
-      final existingUser = usersList.firstWhere(
-        (u) => u['email'] == email && u['password'] == password,
-        orElse: () => null,
-      );
-
-      if (existingUser != null) {
-        _currentUser = User.fromJson(existingUser as Map<String, dynamic>);
-      } else {
-        // Create new user if not found (simple registration)
-        final newUser = User(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          email: email,
-          password: password,
+      if (cedula.trim() == '30141644' && password == '123') {
+        _currentUser = User(
+          id: 'admin_1',
+          cedula: '30141644',
+          password: '123',
         );
 
-        usersList.add(newUser.toJson());
-        await prefs.setString('users', jsonEncode(usersList));
-        _currentUser = newUser;
-      }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('remember_me', rememberMe);
+        if (rememberMe) {
+          await prefs.setString('current_user', jsonEncode(_currentUser!.toJson()));
+        } else {
+          await prefs.remove('current_user');
+        }
 
-      // Save current session
-      await prefs.setString('current_user', jsonEncode(_currentUser!.toJson()));
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
 
       _isLoading = false;
       notifyListeners();
-      return true;
+      return false;
     } catch (e) {
       debugPrint('Error during login: $e');
       _isLoading = false;
@@ -85,6 +81,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('current_user');
+      await prefs.setBool('remember_me', false);
       _currentUser = null;
       notifyListeners();
     } catch (e) {

@@ -1,18 +1,18 @@
 class User {
   final String id;
-  final String email;
+  final String cedula;
   final String password;
 
   User({
     required this.id,
-    required this.email,
+    required this.cedula,
     required this.password,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'email': email,
+      'cedula': cedula,
       'password': password,
     };
   }
@@ -20,7 +20,7 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as String,
-      email: json['email'] as String,
+      cedula: json['cedula'] as String? ?? json['email'] as String? ?? '',
       password: json['password'] as String,
     );
   }
