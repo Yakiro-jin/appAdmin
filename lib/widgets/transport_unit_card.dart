@@ -50,7 +50,7 @@ class TransportUnitCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Unidad ${unit.unitNumber}',
+                      unit.model,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -69,10 +69,10 @@ class TransportUnitCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Icon(Icons.people, size: 16, color: Colors.grey.shade600),
+                        Icon(Icons.color_lens, size: 16, color: Colors.grey.shade600),
                         const SizedBox(width: 4),
                         Text(
-                          '${unit.capacity} pasajeros',
+                          unit.color,
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,

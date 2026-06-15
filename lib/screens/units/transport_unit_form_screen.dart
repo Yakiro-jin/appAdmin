@@ -22,26 +22,37 @@ class TransportUnitFormScreen extends StatefulWidget {
 
 class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _unitNumberController;
   late TextEditingController _plateController;
-  late TextEditingController _capacityController;
+  late TextEditingController _modelController;
+  late TextEditingController _colorController;
+  late TextEditingController _yearController;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _unitNumberController =
-        TextEditingController(text: widget.unit?.unitNumber ?? '');
     _plateController = TextEditingController(text: widget.unit?.plate ?? '');
-    _capacityController =
-        TextEditingController(text: widget.unit?.capacity.toString() ?? '');
+    _modelController = TextEditingController(text: widget.unit?.model ?? '');
+    _colorController = TextEditingController(text: widget.unit?.color ?? '');
+    
+    String initialYear = '';
+    if (widget.unit != null && widget.unit!.yearOfManufacture.isNotEmpty) {
+      try {
+        final parsed = DateTime.parse(widget.unit!.yearOfManufacture);
+        initialYear = parsed.year.toString();
+      } catch (_) {
+        initialYear = widget.unit!.yearOfManufacture;
+      }
+    }
+    _yearController = TextEditingController(text: initialYear);
   }
 
   @override
   void dispose() {
-    _unitNumberController.dispose();
     _plateController.dispose();
-    _capacityController.dispose();
+    _modelController.dispose();
+    _colorController.dispose();
+    _yearController.dispose();
     super.dispose();
   }
 
@@ -51,23 +62,28 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
     setState(() => _isLoading = true);
 
     final dataProvider = context.read<DataProvider>();
-    final capacity = int.parse(_capacityController.text.trim());
+    
+    // Format year as ISO date string: YYYY-01-01T00:00:00.000Z
+    final yearVal = _yearController.text.trim();
+    final isoDateStr = '$yearVal-01-01T00:00:00.000Z';
 
     if (widget.unit == null) {
       // Create new
       await dataProvider.addTransportUnit(
-        _unitNumberController.text.trim(),
-        _plateController.text.trim(),
-        capacity,
-        widget.cooperativeId,
+        plate: _plateController.text.trim(),
+        model: _modelController.text.trim(),
+        color: _colorController.text.trim(),
+        yearOfManufacture: isoDateStr,
+        cooperativeId: widget.cooperativeId,
       );
     } else {
       // Update existing
       await dataProvider.updateTransportUnit(
-        widget.unit!.id,
-        _unitNumberController.text.trim(),
-        _plateController.text.trim(),
-        capacity,
+        id: widget.unit!.id,
+        model: _modelController.text.trim(),
+        color: _colorController.text.trim(),
+        yearOfManufacture: isoDateStr,
+        cooperativeId: widget.cooperativeId,
         routeId: widget.unit!.routeId,
         driverId: widget.unit!.driverId,
       );
@@ -124,30 +140,40 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
                         child: Column(
                           children: [
                             _buildTextField(
-                              controller: _unitNumberController,
-                              label: 'Número de Unidad',
-                              icon: Icons.numbers,
-                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
                               controller: _plateController,
                               label: 'Placa',
                               icon: Icons.badge,
+                              enabled: !isEditing,
                               capitalization: TextCapitalization.characters,
                               validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
-                              controller: _capacityController,
-                              label: 'Capacidad (pasajeros)',
-                              icon: Icons.people,
+                              controller: _modelController,
+                              label: 'Modelo (Ej: Toyota HiAce)',
+                              icon: Icons.directions_car,
+                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _colorController,
+                              label: 'Color',
+                              icon: Icons.color_lens_outlined,
+                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _yearController,
+                              label: 'Año de Fabricación (Ej: 2020)',
+                              icon: Icons.calendar_today,
                               keyboardType: TextInputType.number,
                               formatters: [FilteringTextInputFormatter.digitsOnly],
                               validator: (v) {
                                 if (v == null || v.isEmpty) return 'Campo requerido';
                                 final n = int.tryParse(v);
-                                if (n == null || n <= 0) return 'Ingrese un número válido';
+                                if (n == null || n < 1900 || n > DateTime.now().year + 1) {
+                                  return 'Ingrese un año válido';
+                                }
                                 return null;
                               },
                             ),
@@ -205,6 +231,7 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    bool enabled = true,
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     List<TextInputFormatter>? formatters,
@@ -216,6 +243,7 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
       keyboardType: keyboardType,
       inputFormatters: formatters,
       textCapitalization: capitalization,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 22, color: Colors.orange.shade700),
@@ -231,8 +259,12 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.orange.shade700, width: 2),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: enabled ? Colors.white : Colors.grey.shade100,
       ),
     );
   }

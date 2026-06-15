@@ -15,23 +15,35 @@ class CooperativeFormScreen extends StatefulWidget {
 
 class _CooperativeFormScreenState extends State<CooperativeFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  late TextEditingController _rifController;
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
+  late TextEditingController _locationController;
+  late TextEditingController _scheduleController;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _rifController =
+        TextEditingController(text: widget.cooperative?.id ?? '');
     _nameController =
         TextEditingController(text: widget.cooperative?.name ?? '');
     _descriptionController =
         TextEditingController(text: widget.cooperative?.description ?? '');
+    _locationController =
+        TextEditingController(text: widget.cooperative?.location ?? '');
+    _scheduleController =
+        TextEditingController(text: widget.cooperative?.schedule ?? '');
   }
 
   @override
   void dispose() {
+    _rifController.dispose();
     _nameController.dispose();
     _descriptionController.dispose();
+    _locationController.dispose();
+    _scheduleController.dispose();
     super.dispose();
   }
 
@@ -45,15 +57,20 @@ class _CooperativeFormScreenState extends State<CooperativeFormScreen> {
     if (widget.cooperative == null) {
       // Create new
       await dataProvider.addCooperative(
-        _nameController.text.trim(),
-        _descriptionController.text.trim(),
+        id: _rifController.text.trim(),
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        location: _locationController.text.trim(),
+        schedule: _scheduleController.text.trim(),
       );
     } else {
       // Update existing
       await dataProvider.updateCooperative(
-        widget.cooperative!.id,
-        _nameController.text.trim(),
-        _descriptionController.text.trim(),
+        id: widget.cooperative!.id,
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        location: _locationController.text.trim(),
+        schedule: _scheduleController.text.trim(),
       );
     }
 
@@ -108,9 +125,37 @@ class _CooperativeFormScreenState extends State<CooperativeFormScreen> {
                         child: Column(
                           children: [
                             _buildTextField(
+                              controller: _rifController,
+                              label: 'RIF de la Cooperativa',
+                              icon: Icons.badge_outlined,
+                              enabled: !isEditing,
+                              validator: (v) {
+                                if (v?.isEmpty ?? true) return 'Campo requerido';
+                                if (!RegExp(r'^[JVEG]-\d{8}-\d$').hasMatch(v!.trim())) {
+                                  return 'Formato inválido (Ej: J-12345678-9)';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
                               controller: _nameController,
                               label: 'Nombre de la Cooperativa',
                               icon: Icons.business,
+                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _locationController,
+                              label: 'Ubicación / Ciudad',
+                              icon: Icons.location_on_outlined,
+                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _scheduleController,
+                              label: 'Horario (Ej: 05:00-22:00)',
+                              icon: Icons.access_time,
                               validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
                             ),
                             const SizedBox(height: 16),
@@ -175,6 +220,7 @@ class _CooperativeFormScreenState extends State<CooperativeFormScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    bool enabled = true,
     String? Function(String?)? validator,
     int maxLines = 1,
   }) {
@@ -182,6 +228,7 @@ class _CooperativeFormScreenState extends State<CooperativeFormScreen> {
       controller: controller,
       validator: validator,
       maxLines: maxLines,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 22, color: const Color(0xFF1A1F2B)),
@@ -197,8 +244,12 @@ class _CooperativeFormScreenState extends State<CooperativeFormScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: const Color(0xFF1A1F2B), width: 2),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: enabled ? Colors.white : Colors.grey.shade100,
       ),
     );
   }

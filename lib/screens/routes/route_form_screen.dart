@@ -23,9 +23,12 @@ class RouteFormScreen extends StatefulWidget {
 
 class _RouteFormScreenState extends State<RouteFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  late TextEditingController _idController;
   late TextEditingController _nameController;
-  late TextEditingController _originController;
-  late TextEditingController _destinationController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _fareController;
+  late TextEditingController _originIdController;
+  late TextEditingController _destinationIdController;
   final List<RouteStop> _stops = [];
   bool _isLoading = false;
   final MapController _mapController = MapController();
@@ -35,11 +38,17 @@ class _RouteFormScreenState extends State<RouteFormScreen> {
   @override
   void initState() {
     super.initState();
+    _idController = TextEditingController(text: widget.route?.id ?? '');
     _nameController = TextEditingController(text: widget.route?.name ?? '');
-    _originController = TextEditingController(text: widget.route?.origin ?? '');
-    _destinationController =
-        TextEditingController(text: widget.route?.destination ?? '');
-    
+    _descriptionController =
+        TextEditingController(text: widget.route?.description ?? '');
+    _fareController =
+        TextEditingController(text: widget.route?.fare.toString() ?? '');
+    _originIdController =
+        TextEditingController(text: widget.route?.originId?.toString() ?? '1');
+    _destinationIdController =
+        TextEditingController(text: widget.route?.destinationId?.toString() ?? '2');
+
     if (widget.route != null) {
       _stops.addAll(widget.route!.stops);
       if (_stops.isNotEmpty) {
@@ -81,9 +90,12 @@ class _RouteFormScreenState extends State<RouteFormScreen> {
 
   @override
   void dispose() {
+    _idController.dispose();
     _nameController.dispose();
-    _originController.dispose();
-    _destinationController.dispose();
+    _descriptionController.dispose();
+    _fareController.dispose();
+    _originIdController.dispose();
+    _destinationIdController.dispose();
     super.dispose();
   }
 
@@ -138,22 +150,31 @@ class _RouteFormScreenState extends State<RouteFormScreen> {
     setState(() => _isLoading = true);
 
     final dataProvider = context.read<DataProvider>();
+    final fare = int.parse(_fareController.text.trim());
+    final originId = int.tryParse(_originIdController.text.trim());
+    final destinationId = int.tryParse(_destinationIdController.text.trim());
 
     if (widget.route == null) {
       await dataProvider.addRoute(
-        _nameController.text.trim(),
-        _originController.text.trim(),
-        _destinationController.text.trim(),
-        widget.cooperativeId,
-        _stops,
+        id: _idController.text.trim(),
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        fare: fare,
+        cooperativeId: widget.cooperativeId,
+        originId: originId,
+        destinationId: destinationId,
+        stops: _stops,
       );
     } else {
       await dataProvider.updateRoute(
-        widget.route!.id,
-        _nameController.text.trim(),
-        _originController.text.trim(),
-        _destinationController.text.trim(),
-        _stops,
+        id: widget.route!.id,
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        fare: fare,
+        cooperativeId: widget.cooperativeId,
+        originId: originId,
+        destinationId: destinationId,
+        stops: _stops,
       );
     }
 
@@ -213,6 +234,14 @@ class _RouteFormScreenState extends State<RouteFormScreen> {
                         child: Column(
                           children: [
                             _buildTextField(
+                              controller: _idController,
+                              label: 'Número de Ruta (Ej: RUT-001)',
+                              icon: Icons.numbers,
+                              enabled: !isEditing,
+                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
                               controller: _nameController,
                               label: 'Nombre de la Ruta',
                               icon: Icons.route,
@@ -220,17 +249,39 @@ class _RouteFormScreenState extends State<RouteFormScreen> {
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
-                              controller: _originController,
-                              label: 'Origen',
-                              icon: Icons.location_on,
+                              controller: _descriptionController,
+                              label: 'Descripción de la Ruta',
+                              icon: Icons.description_outlined,
                               validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
-                              controller: _destinationController,
-                              label: 'Destino',
-                              icon: Icons.flag,
+                              controller: _fareController,
+                              label: 'Tarifa (Ej: 50)',
+                              icon: Icons.attach_money,
                               validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: _originIdController,
+                                    label: 'ID Control Origen',
+                                    icon: Icons.location_on,
+                                    validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: _destinationIdController,
+                                    label: 'ID Control Destino',
+                                    icon: Icons.flag,
+                                    validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -428,11 +479,13 @@ class _RouteFormScreenState extends State<RouteFormScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    bool enabled = true,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       validator: validator,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 22, color: Colors.green.shade700),
@@ -448,8 +501,12 @@ class _RouteFormScreenState extends State<RouteFormScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.green.shade700, width: 2),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: enabled ? Colors.white : Colors.grey.shade100,
       ),
     );
   }
