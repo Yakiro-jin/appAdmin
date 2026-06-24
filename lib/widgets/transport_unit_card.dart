@@ -2,19 +2,15 @@ import 'package:flutter/material.dart';
 import '../../models/transport_unit.dart';
 
 class TransportUnitCard extends StatelessWidget {
-  final TransportUnit unit;
-  final String? driverName;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-  final VoidCallback? onTap;
+  final TransportUnit unit; // Modelo de datos que representa la unidad de transporte
+  final String? driverName; // Nombre completo del chofer asignado (puede ser nulo)
+  final VoidCallback onTap; // Callback que se ejecuta al presionar la tarjeta completa
 
   const TransportUnitCard({
     super.key,
     required this.unit,
     this.driverName,
-    required this.onEdit,
-    required this.onDelete,
-    this.onTap,
+    required this.onTap, // onTap ahora es requerido para abrir la edición directamente
   });
 
   @override
@@ -26,12 +22,13 @@ class TransportUnitCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap, // Acción al presionar directamente la tarjeta
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
+              // Icono representativo de autobús/unidad
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -45,10 +42,12 @@ class TransportUnitCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
+              // Información detallada de la unidad
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Título principal con el modelo de la unidad
                     Text(
                       unit.model,
                       style: const TextStyle(
@@ -57,6 +56,7 @@ class TransportUnitCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
+                    // Fila con Placa y Color
                     Row(
                       children: [
                         Icon(Icons.badge, size: 16, color: Colors.grey.shade600),
@@ -81,6 +81,7 @@ class TransportUnitCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
+                    // Fila con el Chofer Asignado
                     Row(
                       children: [
                         Icon(Icons.person,
@@ -104,37 +105,6 @@ class TransportUnitCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    onEdit();
-                  } else if (value == 'delete') {
-                    onDelete();
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit, size: 20),
-                        SizedBox(width: 8),
-                        Text('Editar'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 20, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Eliminar', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

@@ -6,16 +6,12 @@ class RouteCard extends StatelessWidget {
   final TransportRoute route;
   final int unitCount;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   const RouteCard({
     super.key,
     required this.route,
     required this.unitCount,
     required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
   });
 
   @override
@@ -83,7 +79,6 @@ class RouteCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      _buildMenuButton(),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -135,42 +130,6 @@ class RouteCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMenuButton() {
-    return PopupMenuButton<String>(
-      onSelected: (value) {
-        if (value == 'edit') {
-          onEdit();
-        } else if (value == 'delete') {
-          onDelete();
-        }
-      },
-      icon: Icon(Icons.more_vert, color: Colors.grey.shade400),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit_outlined, size: 20),
-              SizedBox(width: 12),
-              Text('Editar'),
-            ],
-          ),
-        ),
-        const PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline, size: 20, color: Colors.red),
-              SizedBox(width: 12),
-              Text('Eliminar', style: TextStyle(color: Colors.red)),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

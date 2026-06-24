@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/cooperative.dart';
-import '../../models/transport_unit.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/data_provider.dart';
 import '../../widgets/route_card.dart';
 import '../../widgets/transport_unit_card.dart';
 import '../routes/route_form_screen.dart';
-import '../routes/route_detail_screen.dart';
 import 'cooperative_form_screen.dart';
 import 'driver_form_screen.dart';
 import '../units/transport_unit_form_screen.dart';
@@ -138,71 +136,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _showDeleteRouteDialog(BuildContext context, String routeId, String routeName) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Confirmar eliminación', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Text(
-            '¿Está seguro de eliminar la ruta "$routeName"? Sus unidades dejarán de estar asignadas a esta ruta.'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<DataProvider>().deleteRoute(routeId);
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Ruta eliminada')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              elevation: 0,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteUnitDialog(BuildContext context, String unitId, String unitNumber) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Confirmar eliminación', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Text('¿Está seguro de eliminar la unidad "$unitNumber"?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<DataProvider>().deleteTransportUnit(unitId);
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Unidad eliminada')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              elevation: 0,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showDeleteDriverDialog(BuildContext context, String driverId, String driverName) {
     showDialog(
       context: context,
@@ -233,108 +166,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-    );
-  }
-
-  void _showDriverSelectionDialog(BuildContext context, DataProvider dataProvider, TransportUnit unit, String cooperativeId) {
-    final drivers = dataProvider.getDriversByCooperative(cooperativeId);
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(
-            'Asignar Chofer a Unidad ${unit.unitNumber}',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: drivers.isEmpty
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.person_off_rounded, size: 48, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No hay choferes registrados en esta cooperativa.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(color: Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => DriverFormScreen(
-                                cooperativeId: cooperativeId,
-                              ),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Registrar Chofer'),
-                      ),
-                    ],
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: drivers.length,
-                    itemBuilder: (context, index) {
-                      final driver = drivers[index];
-                      final isCurrent = unit.driverId == driver.id;
-
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isCurrent ? Colors.green.shade100 : Colors.grey.shade100,
-                          child: Icon(
-                            Icons.person,
-                            color: isCurrent ? Colors.green.shade800 : Colors.grey.shade700,
-                          ),
-                        ),
-                        title: Text(
-                          '${driver.name} ${driver.lastName}',
-                          style: GoogleFonts.poppins(
-                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                        subtitle: Text('Telf: ${driver.phone}'),
-                        trailing: isCurrent ? const Icon(Icons.check_circle, color: Colors.green) : null,
-                        onTap: () {
-                          dataProvider.assignDriverToUnit(unit.id, driver.id);
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Chofer ${driver.name} ${driver.lastName} asignado a la unidad ${unit.unitNumber}')),
-                          );
-                        },
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            if (unit.driverId != null && unit.driverId!.isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  dataProvider.assignDriverToUnit(unit.id, null);
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Chofer desasignado de la unidad ${unit.unitNumber}')),
-                  );
-                },
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Quitar Chofer (Ninguno)'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -622,11 +453,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           unitCount: unitCount,
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => RouteDetailScreen(route: route)),
-            );
-          },
-          onEdit: () {
-            Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => RouteFormScreen(
                   cooperativeId: cooperative.id,
@@ -635,7 +461,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             );
           },
-          onDelete: () => _showDeleteRouteDialog(context, route.id, route.name),
         );
       },
     );
@@ -674,10 +499,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final matchingDrivers = dataProvider.drivers.where((d) => d.id == unit.driverId);
         final driverName = matchingDrivers.isNotEmpty ? '${matchingDrivers.first.name} ${matchingDrivers.first.lastName}' : null;
 
+        // Retornamos la tarjeta visual del bus con su información y acción de tap directa
         return TransportUnitCard(
           unit: unit,
           driverName: driverName,
-          onEdit: () {
+          onTap: () {
+            // Al presionar la tarjeta del bus, navegamos directamente a la pantalla de edición
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => TransportUnitFormScreen(
@@ -687,8 +514,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             );
           },
-          onDelete: () => _showDeleteUnitDialog(context, unit.id, unit.unitNumber),
-          onTap: () => _showDriverSelectionDialog(context, dataProvider, unit, cooperative.id),
         );
       },
     );

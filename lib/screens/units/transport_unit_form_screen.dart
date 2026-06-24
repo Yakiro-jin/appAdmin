@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/transport_unit.dart';
+import '../../models/driver.dart';
 import '../../providers/data_provider.dart';
 
 class TransportUnitFormScreen extends StatefulWidget {
@@ -101,8 +102,126 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
     );
   }
 
+  // Muestra un diálogo de confirmación antes de eliminar el bus/unidad.
+  // Llama a dataProvider.deleteTransportUnit y luego regresa a la pantalla anterior.
+  void _showDeleteUnitDialog(BuildContext context, DataProvider dataProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Confirmar eliminación', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Text('¿Está seguro de eliminar la unidad "${widget.unit!.plate}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              dataProvider.deleteTransportUnit(widget.unit!.id);
+              Navigator.of(ctx).pop(); // Cierra el diálogo
+              Navigator.of(context).pop(); // Cierra el formulario de edición
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Unidad eliminada')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Muestra un diálogo con los choferes registrados en la cooperativa actual.
+  // Permite al usuario seleccionar un chofer para asignarlo a esta unidad de transporte.
+  void _showDriverSelectionDialog(BuildContext context, DataProvider dataProvider) {
+    final drivers = dataProvider.getDriversByCooperative(widget.cooperativeId);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(
+            'Asignar Chofer a Unidad ${widget.unit!.plate}',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: drivers.isEmpty
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person_off_rounded, size: 48, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No hay choferes registrados en esta cooperativa.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: drivers.length,
+                    itemBuilder: (context, index) {
+                      final driver = drivers[index];
+                      
+                      // Buscamos la versión más actualizada de la unidad desde el dataProvider reactivo
+                      final currentUnitState = dataProvider.units.firstWhere(
+                        (u) => u.id == widget.unit!.id,
+                        orElse: () => widget.unit!,
+                      );
+                      final isCurrent = currentUnitState.driverId == driver.id;
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: isCurrent ? Colors.green.shade100 : Colors.grey.shade100,
+                          child: Icon(
+                            Icons.person,
+                            color: isCurrent ? Colors.green.shade800 : Colors.grey.shade700,
+                          ),
+                        ),
+                        title: Text(
+                          '${driver.name} ${driver.lastName}',
+                          style: GoogleFonts.poppins(
+                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        subtitle: Text('Telf: ${driver.phone}'),
+                        trailing: isCurrent ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                        onTap: () {
+                          // Asignamos el chofer a la unidad usando el provider
+                          dataProvider.assignDriverToUnit(widget.unit!.id, driver.id);
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Chofer ${driver.name} asignado')),
+                          );
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Obtenemos DataProvider de forma reactiva para actualizar la UI en cambios de asignación o borrado
+    final dataProvider = Provider.of<DataProvider>(context);
     final isEditing = widget.unit != null;
 
     return Scaffold(
@@ -181,7 +300,133 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
                         ),
                       ),
                     ),
+                    // Si estamos editando un bus/unidad existente, mostramos la sección para gestionar su chofer
+                    if (isEditing) ...[
+                      const SizedBox(height: 24),
+                      // Fila de cabecera para la sección de Chofer Asignado
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildSectionTitle('Chofer Asignado', Icons.person_outline),
+                          // Botón para asignar un chofer abriendo el diálogo de selección
+                          TextButton.icon(
+                            onPressed: () => _showDriverSelectionDialog(context, dataProvider),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Asignar'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Builder reactivo para consultar el estado del chofer asignado a esta unidad
+                      Builder(
+                        builder: (context) {
+                          // Obtenemos el estado actual del bus desde la lista reactiva de unidades en el DataProvider
+                          final currentUnit = dataProvider.units.firstWhere(
+                            (u) => u.id == widget.unit!.id,
+                            orElse: () => widget.unit!,
+                          );
+                          
+                          // Si no hay un chofer asignado, mostramos una advertencia visual bonita
+                          if (currentUnit.driverId == null || currentUnit.driverId!.isEmpty) {
+                            return Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.person_off_outlined, size: 40, color: Colors.grey.shade400),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Sin chofer asignado',
+                                    style: TextStyle(color: Colors.red.shade400, fontSize: 14, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // Si hay un chofer, buscamos sus detalles en la lista de choferes del provider
+                          final driver = dataProvider.drivers.firstWhere(
+                            (d) => d.id == currentUnit.driverId,
+                            orElse: () => Driver(
+                              id: currentUnit.driverId!,
+                              name: 'Chofer',
+                              lastName: 'No Encontrado',
+                              email: '',
+                              phone: '',
+                              age: 0,
+                              cooperativeId: widget.cooperativeId,
+                              createdAt: DateTime.now(),
+                            ),
+                          );
+
+                          // Mostramos la tarjeta del chofer asignado con opción de quitarlo
+                          return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.green.shade100,
+                                child: Icon(Icons.person, color: Colors.green.shade800),
+                              ),
+                              title: Text(
+                                '${driver.name} ${driver.lastName}',
+                                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+                              ),
+                              subtitle: Text('Telf: ${driver.phone}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.person_remove, color: Colors.red),
+                                tooltip: 'Quitar Chofer',
+                                onPressed: () {
+                                  // Diálogo de confirmación antes de desasignar al chofer del bus
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: Text('Confirmar desasignación', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                                      content: Text('¿Está seguro de quitar al chofer "${driver.name}" de esta unidad?'),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(ctx).pop(),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            // Desasignamos al chofer pasando null como driverId
+                                            dataProvider.assignDriverToUnit(widget.unit!.id, null);
+                                            Navigator.of(ctx).pop();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Chofer desasignado de la unidad')),
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
+                                            elevation: 0,
+                                          ),
+                                          child: const Text('Quitar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 32),
+                    // Botón principal para Guardar/Actualizar los detalles del bus
                     ElevatedButton(
                       onPressed: _isLoading ? null : _handleSave,
                       style: ElevatedButton.styleFrom(
@@ -200,6 +445,28 @@ class _TransportUnitFormScreenState extends State<TransportUnitFormScreen> {
                               style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
                             ),
                     ),
+                    // Si estamos editando, mostramos el botón Eliminar en rojo al final de toda la pantalla
+                    if (isEditing) ...[
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading ? null : () => _showDeleteUnitDialog(context, dataProvider),
+                        icon: const Icon(Icons.delete_outline),
+                        label: Text(
+                          'Eliminar Unidad',
+                          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          minimumSize: const Size(double.infinity, 0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
