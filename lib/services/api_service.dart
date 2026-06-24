@@ -5,6 +5,7 @@ import '../config/api_config.dart';
 import '../models/cooperative.dart';
 import '../models/route.dart';
 import '../models/transport_unit.dart';
+import '../models/driver.dart';
 
 class ApiService {
   static final http.Client _client = http.Client();
@@ -275,6 +276,103 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('Error deleting vehicle: $e');
+      rethrow;
+    }
+  }
+
+  // --- PERSONAS (DRIVER) ENDPOINTS ---
+
+  static Future<List<Driver>> getPersonas() async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/personas/Todos');
+    debugPrint('GET: $url');
+    try {
+      final response = await _client.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        List<dynamic> list = [];
+        if (decoded is List) {
+          list = decoded;
+        } else if (decoded is Map) {
+          if (decoded.containsKey('data') && decoded['data'] is List) {
+            list = decoded['data'];
+          } else if (decoded.containsKey('personas') && decoded['personas'] is List) {
+            list = decoded['personas'];
+          } else if (decoded.containsKey('result') && decoded['result'] is List) {
+            list = decoded['result'];
+          }
+        }
+        return list.map((json) => Driver.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load personas: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting personas: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Driver> registerPersona(Driver driver) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/personas/Registrar');
+    debugPrint('POST: $url');
+    final body = jsonEncode({
+      'cedula': driver.id,
+      'nombre': driver.name,
+      'apellido': driver.lastName,
+      'email': driver.email,
+      'telefono': driver.phone,
+      'edad': driver.age,
+    });
+    debugPrint('Body: $body');
+    try {
+      final response = await _client.post(url, headers: _headers, body: body);
+      debugPrint('Status: ${response.statusCode}, Body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Driver.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('Failed to register persona: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error registering persona: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Driver> updatePersona(Driver driver) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/personas/Update/${driver.id}');
+    debugPrint('PATCH: $url');
+    final body = jsonEncode({
+      'nombre': driver.name,
+      'apellido': driver.lastName,
+      'email': driver.email,
+      'telefono': driver.phone,
+      'edad': driver.age,
+    });
+    debugPrint('Body: $body');
+    try {
+      final response = await _client.patch(url, headers: _headers, body: body);
+      debugPrint('Status: ${response.statusCode}, Body: ${response.body}');
+      if (response.statusCode == 200) {
+        return Driver.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('Failed to update persona: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error updating persona: $e');
+      rethrow;
+    }
+  }
+
+  static Future<void> deletePersona(String cedula) async {
+    final url = Uri.parse('${ApiConfig.baseUrl}/personas/Delete/$cedula');
+    debugPrint('DELETE: $url');
+    try {
+      final response = await _client.delete(url, headers: _headers);
+      debugPrint('Status: ${response.statusCode}, Body: ${response.body}');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to delete persona: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error deleting persona: $e');
       rethrow;
     }
   }

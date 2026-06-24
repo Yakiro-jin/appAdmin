@@ -297,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
                         title: Text(
-                          driver.name,
+                          '${driver.name} ${driver.lastName}',
                           style: GoogleFonts.poppins(
                             fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
                           ),
@@ -308,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           dataProvider.assignDriverToUnit(unit.id, driver.id);
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Chofer ${driver.name} asignado a la unidad ${unit.unitNumber}')),
+                            SnackBar(content: Text('Chofer ${driver.name} ${driver.lastName} asignado a la unidad ${unit.unitNumber}')),
                           );
                         },
                       );
@@ -671,9 +671,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       padding: const EdgeInsets.symmetric(vertical: 12),
       itemBuilder: (context, index) {
         final unit = units[index];
-
         final matchingDrivers = dataProvider.drivers.where((d) => d.id == unit.driverId);
-        final driverName = matchingDrivers.isNotEmpty ? matchingDrivers.first.name : null;
+        final driverName = matchingDrivers.isNotEmpty ? '${matchingDrivers.first.name} ${matchingDrivers.first.lastName}' : null;
 
         return TransportUnitCard(
           unit: unit,
@@ -738,16 +737,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: Icon(Icons.person, color: Colors.blue.shade800, size: 28),
             ),
             title: Text(
-              driver.name,
+              '${driver.name} ${driver.lastName}',
               style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 4.0),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.phone, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(driver.phone, style: TextStyle(color: Colors.grey.shade600)),
+                  Row(
+                    children: [
+                      const Icon(Icons.badge_outlined, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text('C.I. ${driver.id}', style: TextStyle(color: Colors.grey.shade600)),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.phone, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(driver.phone, style: TextStyle(color: Colors.grey.shade600)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.email_outlined, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(driver.email, style: TextStyle(color: Colors.grey.shade600)),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.cake_outlined, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text('${driver.age} años', style: TextStyle(color: Colors.grey.shade600)),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -763,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   );
                 } else if (value == 'delete') {
-                  _showDeleteDriverDialog(context, driver.id, driver.name);
+                  _showDeleteDriverDialog(context, driver.id, '${driver.name} ${driver.lastName}');
                 }
               },
               itemBuilder: (context) => [

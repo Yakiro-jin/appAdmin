@@ -51,15 +51,60 @@ class DataProvider with ChangeNotifier {
     }
 
     try {
-      // 4. Load drivers and local assignments from SharedPreferences
+      // 4. Load drivers (personas) from API
+      final apiPersonas = await ApiService.getPersonas();
       final prefs = await SharedPreferences.getInstance();
+      
+      // Load mappings from SharedPreferences
+      final mappingsJson = prefs.getString('persona_cooperative_mappings') ?? '{}';
+      final Map<String, dynamic> mappings = jsonDecode(mappingsJson);
 
+      // Load cached drivers to retrieve their cooperativeId
       final driversJson = prefs.getString('drivers') ?? '[]';
-      final driversList = jsonDecode(driversJson) as List;
-      _drivers = driversList
-          .map((json) => Driver.fromJson(json as Map<String, dynamic>))
-          .toList();
+      final List<dynamic> localDriversList = jsonDecode(driversJson);
+      final Map<String, String> localDriverCoops = {};
+      for (final json in localDriversList) {
+        try {
+          final d = Driver.fromJson(json as Map<String, dynamic>);
+          if (d.cooperativeId.isNotEmpty) {
+            localDriverCoops[d.id] = d.cooperativeId;
+          }
+        } catch (_) {}
+      }
 
+      _drivers = apiPersonas.map((driver) {
+        String? coopId = mappings[driver.id]?.toString();
+        coopId ??= localDriverCoops[driver.id];
+
+        // Fallback: If no cooperative mapping exists, default to the first cooperative
+        if ((coopId == null || coopId.isEmpty) && _cooperatives.isNotEmpty) {
+          coopId = _cooperatives.first.id;
+        }
+
+        if (coopId != null && coopId.isNotEmpty) {
+          return driver.copyWith(cooperativeId: coopId);
+        }
+        return driver;
+      }).toList();
+
+      // Proactively sync mappings back to SharedPreferences cache
+      await _saveLocalCache();
+    } catch (e) {
+      debugPrint('Error loading drivers from API: $e');
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final driversJson = prefs.getString('drivers') ?? '[]';
+        final driversList = jsonDecode(driversJson) as List;
+        _drivers = driversList
+            .map((json) => Driver.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } catch (err) {
+        debugPrint('Error loading cached local drivers: $err');
+      }
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
       // Load route and driver assignments cache if any
       final assignmentsJson = prefs.getString('unit_assignments') ?? '{}';
       final Map<String, dynamic> assignments = jsonDecode(assignmentsJson);
@@ -91,6 +136,14 @@ class DataProvider with ChangeNotifier {
         'drivers',
         jsonEncode(_drivers.map((d) => d.toJson()).toList()),
       );
+
+      final Map<String, String> mappings = {};
+      for (final driver in _drivers) {
+        if (driver.cooperativeId.isNotEmpty) {
+          mappings[driver.id] = driver.cooperativeId;
+        }
+      }
+      await prefs.setString('persona_cooperative_mappings', jsonEncode(mappings));
 
       final Map<String, dynamic> assignments = {};
       for (final unit in _units) {
@@ -309,40 +362,112 @@ class DataProvider with ChangeNotifier {
 
   // --- Driver CRUD ---
 
-  Future<void> addDriver(String name, String phone, String cooperativeId) async {
+  Future<void> addDriver({
+    required String id,
+    required String name,
+    required String lastName,
+    required String email,
+    required String phone,
+    required int age,
+    required String cooperativeId,
+  }) async {
     final driver = Driver(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: id,
       name: name,
+      lastName: lastName,
+      email: email,
       phone: phone,
+      age: age,
       cooperativeId: cooperativeId,
       createdAt: DateTime.now(),
     );
 
-    _drivers.add(driver);
-    await _saveLocalCache();
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final created = await ApiService.registerPersona(driver);
+      final finalDriver = created.copyWith(
+        id: created.id.isNotEmpty ? created.id : id,
+        cooperativeId: cooperativeId,
+      );
+      _drivers.add(finalDriver);
+      await _saveLocalCache();
+    } catch (e) {
+      debugPrint('Error registering driver/persona: $e');
+      _drivers.add(driver);
+      await _saveLocalCache();
+    }
+
+    _isLoading = false;
     notifyListeners();
   }
 
-  Future<void> updateDriver(String id, String name, String phone) async {
-    final index = _drivers.indexWhere((d) => d.id == id);
-    if (index != -1) {
-      _drivers[index] = _drivers[index].copyWith(
-        name: name,
-        phone: phone,
+  Future<void> updateDriver({
+    required String id,
+    required String name,
+    required String lastName,
+    required String email,
+    required String phone,
+    required int age,
+    required String cooperativeId,
+  }) async {
+    final driver = Driver(
+      id: id,
+      name: name,
+      lastName: lastName,
+      email: email,
+      phone: phone,
+      age: age,
+      cooperativeId: cooperativeId,
+      createdAt: DateTime.now(),
+    );
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final updated = await ApiService.updatePersona(driver);
+      final finalDriver = updated.copyWith(
+        id: updated.id.isNotEmpty ? updated.id : id,
+        cooperativeId: cooperativeId,
       );
+      final index = _drivers.indexWhere((d) => d.id == id);
+      if (index != -1) {
+        _drivers[index] = finalDriver;
+      }
       await _saveLocalCache();
-      notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating driver/persona: $e');
+      final index = _drivers.indexWhere((d) => d.id == id);
+      if (index != -1) {
+        _drivers[index] = driver;
+      }
+      await _saveLocalCache();
     }
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   Future<void> deleteDriver(String id) async {
-    _drivers.removeWhere((d) => d.id == id);
-    for (int i = 0; i < _units.length; i++) {
-      if (_units[i].driverId == id) {
-        _units[i] = _units[i].copyWith(driverId: null);
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await ApiService.deletePersona(id);
+      _drivers.removeWhere((d) => d.id == id);
+      for (int i = 0; i < _units.length; i++) {
+        if (_units[i].driverId == id) {
+          _units[i] = _units[i].copyWith(driverId: null);
+        }
       }
+      await _saveLocalCache();
+    } catch (e) {
+      debugPrint('Error deleting driver/persona: $e');
     }
-    await _saveLocalCache();
+
+    _isLoading = false;
     notifyListeners();
   }
 

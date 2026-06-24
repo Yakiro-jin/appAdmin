@@ -21,21 +21,34 @@ class DriverFormScreen extends StatefulWidget {
 
 class _DriverFormScreenState extends State<DriverFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  late TextEditingController _cedulaController;
   late TextEditingController _nameController;
+  late TextEditingController _lastNameController;
+  late TextEditingController _emailController;
   late TextEditingController _phoneController;
+  late TextEditingController _ageController;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _cedulaController = TextEditingController(text: widget.driver?.id ?? '');
     _nameController = TextEditingController(text: widget.driver?.name ?? '');
+    _lastNameController = TextEditingController(text: widget.driver?.lastName ?? '');
+    _emailController = TextEditingController(text: widget.driver?.email ?? '');
     _phoneController = TextEditingController(text: widget.driver?.phone ?? '');
+    _ageController = TextEditingController(
+        text: widget.driver != null ? widget.driver!.age.toString() : '');
   }
 
   @override
   void dispose() {
+    _cedulaController.dispose();
     _nameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -46,19 +59,34 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
 
     final dataProvider = context.read<DataProvider>();
 
+    final id = _cedulaController.text.trim();
+    final name = _nameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final age = int.tryParse(_ageController.text.trim()) ?? 0;
+
     if (widget.driver == null) {
       // Create new
       await dataProvider.addDriver(
-        _nameController.text.trim(),
-        _phoneController.text.trim(),
-        widget.cooperativeId,
+        id: id,
+        name: name,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        age: age,
+        cooperativeId: widget.cooperativeId,
       );
     } else {
       // Update existing
       await dataProvider.updateDriver(
-        widget.driver!.id,
-        _nameController.text.trim(),
-        _phoneController.text.trim(),
+        id: widget.driver!.id,
+        name: name,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        age: age,
+        cooperativeId: widget.cooperativeId,
       );
     }
 
@@ -113,10 +141,37 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
                         child: Column(
                           children: [
                             _buildTextField(
+                              controller: _cedulaController,
+                              label: 'Cédula de identidad',
+                              icon: Icons.badge_outlined,
+                              enabled: !isEditing,
+                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
                               controller: _nameController,
-                              label: 'Nombre completo',
+                              label: 'Nombre',
                               icon: Icons.person,
                               validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _lastNameController,
+                              label: 'Apellido',
+                              icon: Icons.person_outline,
+                              validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _emailController,
+                              label: 'Email',
+                              icon: Icons.email,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Campo requerido';
+                                if (!v.contains('@')) return 'Email inválido';
+                                return null;
+                              },
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
@@ -126,6 +181,20 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
                               keyboardType: TextInputType.phone,
                               formatters: [FilteringTextInputFormatter.digitsOnly],
                               validator: (v) => v?.isEmpty ?? true ? 'Campo requerido' : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _ageController,
+                              label: 'Edad',
+                              icon: Icons.cake,
+                              keyboardType: TextInputType.number,
+                              formatters: [FilteringTextInputFormatter.digitsOnly],
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Campo requerido';
+                                final age = int.tryParse(v);
+                                if (age == null || age <= 0) return 'Edad inválida';
+                                return null;
+                              },
                             ),
                           ],
                         ),
@@ -190,12 +259,14 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
     String? Function(String?)? validator,
     TextInputType? keyboardType,
     List<TextInputFormatter>? formatters,
+    bool enabled = true,
   }) {
     return TextFormField(
       controller: controller,
       validator: validator,
       keyboardType: keyboardType,
       inputFormatters: formatters,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 22, color: const Color(0xFF1A1F2B)),
@@ -211,8 +282,12 @@ class _DriverFormScreenState extends State<DriverFormScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: const Color(0xFF1A1F2B), width: 2),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: enabled ? Colors.white : Colors.grey.shade100,
       ),
     );
   }

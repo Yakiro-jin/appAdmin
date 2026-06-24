@@ -178,7 +178,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> with SingleTicker
                           ),
                         ),
                         title: Text(
-                          driver.name,
+                          '${driver.name} ${driver.lastName}',
                           style: GoogleFonts.poppins(
                             fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
                           ),
@@ -189,7 +189,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> with SingleTicker
                           dataProvider.assignDriverToUnit(unit.id, driver.id);
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Chofer ${driver.name} asignado a la unidad ${unit.unitNumber}')),
+                            SnackBar(content: Text('Chofer ${driver.name} ${driver.lastName} asignado a la unidad ${unit.unitNumber}')),
                           );
                         },
                       );
@@ -486,9 +486,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> with SingleTicker
           padding: const EdgeInsets.all(16),
           itemBuilder: (context, index) {
             final unit = units[index];
-
             final matchingDrivers = dataProvider.drivers.where((d) => d.id == unit.driverId);
-            final driverName = matchingDrivers.isNotEmpty ? matchingDrivers.first.name : null;
+            final driverName = matchingDrivers.isNotEmpty ? '${matchingDrivers.first.name} ${matchingDrivers.first.lastName}' : null;
 
             return TransportUnitCard(
               unit: unit,
